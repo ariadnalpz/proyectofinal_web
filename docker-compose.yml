@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: ropa_db
+      POSTGRES_USER: ropa_user
+      POSTGRES_PASSWORD: ropa_pass
+    ports: 
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
