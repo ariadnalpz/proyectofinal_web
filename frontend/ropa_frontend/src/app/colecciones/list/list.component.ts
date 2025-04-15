@@ -1,4 +1,3 @@
-// src/app/colecciones/list/list.component.ts
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
@@ -74,7 +73,7 @@ export class ListComponent implements OnInit, OnDestroy {
     this.store.dispatch(loadColecciones());
 
     this.storeSub = this.store.select(selectAllColecciones).subscribe({
-      next: this.handleColeccionesLoaded.bind(this), // Vincular el contexto explícitamente
+      next: this.handleColeccionesLoaded.bind(this),
       error: (err) => {
         this.errorMessage = 'Error al cargar las colecciones: ' + err.message;
         console.error(err);
@@ -100,14 +99,14 @@ export class ListComponent implements OnInit, OnDestroy {
 
   private handleColeccionesLoaded(data: Coleccion[]): void {
     console.log('Colecciones cargadas:', data);
-    console.log('cdr:', this.cdr); // Para depuración
+    console.log('cdr:', this.cdr);
     if (this.cdr) {
       this.cdr.detach();
       this.dataSource.data = data;
       this.cdr.reattach();
     } else {
       console.error('ChangeDetectorRef no está disponible');
-      this.dataSource.data = data; // Actualizar los datos sin detección manual
+      this.dataSource.data = data;
     }
   }
 
