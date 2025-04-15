@@ -1,10 +1,14 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+// src/app/colecciones/list/list.component.ts
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterModule, ActivatedRoute } from '@angular/router';
-import { ColeccionService, Coleccion } from '../coleccion.service';
+import { Store } from '@ngrx/store';
 import { Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { Coleccion } from '../coleccion.model';
+import { loadColecciones, selectAllColecciones, selectColeccionesError } from '../../state';
 
 @Component({
   selector: 'app-list',
@@ -13,7 +17,7 @@ import { Subscription } from 'rxjs';
     CommonModule,
     MatTableModule,
     MatButtonModule,
-    RouterModule
+    RouterModule,
   ],
   template: `
     <h2>Colecciones</h2>
@@ -50,43 +54,69 @@ import { Subscription } from 'rxjs';
   styles: [`
     .mat-elevation-z8 { width: 100%; margin-top: 20px; }
     .error { color: red; margin-bottom: 10px; }
-  `]
+  `],
 })
 export class ListComponent implements OnInit, OnDestroy {
   dataSource = new MatTableDataSource<Coleccion>([]);
   displayedColumns: string[] = ['nombre', 'temporada', 'tendencia', 'stock', 'acciones'];
   errorMessage: string | null = null;
   private routeSub: Subscription | null = null;
+  private storeSub: Subscription | null = null;
 
   constructor(
-    private coleccionService: ColeccionService,
-    private route: ActivatedRoute
+    private store: Store,
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    this.loadColecciones();
+    console.log('Disparando loadColecciones al inicio');
+    this.store.dispatch(loadColecciones());
 
-    this.routeSub = this.route.queryParams.subscribe(() => {
-      this.loadColecciones();
+    this.storeSub = this.store.select(selectAllColecciones).subscribe({
+      next: this.handleColeccionesLoaded.bind(this), // Vincular el contexto explícitamente
+      error: (err) => {
+        this.errorMessage = 'Error al cargar las colecciones: ' + err.message;
+        console.error(err);
+      },
     });
+
+    this.store.select(selectColeccionesError).subscribe((error) => {
+      this.errorMessage = error;
+    });
+
+    this.routeSub = this.route.queryParams
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged((prev, curr) => prev['refresh'] === curr['refresh'])
+      )
+      .subscribe((params) => {
+        if (params['refresh']) {
+          console.log('Disparando loadColecciones por queryParams:', params);
+          this.store.dispatch(loadColecciones());
+        }
+      });
+  }
+
+  private handleColeccionesLoaded(data: Coleccion[]): void {
+    console.log('Colecciones cargadas:', data);
+    console.log('cdr:', this.cdr); // Para depuración
+    if (this.cdr) {
+      this.cdr.detach();
+      this.dataSource.data = data;
+      this.cdr.reattach();
+    } else {
+      console.error('ChangeDetectorRef no está disponible');
+      this.dataSource.data = data; // Actualizar los datos sin detección manual
+    }
   }
 
   ngOnDestroy(): void {
     if (this.routeSub) {
       this.routeSub.unsubscribe();
     }
-  }
-
-  loadColecciones(): void {
-    this.coleccionService.getColecciones().subscribe({
-      next: (data) => {
-        console.log('Colecciones cargadas:', data);
-        this.dataSource.data = data;
-      },
-      error: (err) => {
-        this.errorMessage = 'Error al cargar las colecciones: ' + err.message;
-        console.error(err);
-      }
-    });
+    if (this.storeSub) {
+      this.storeSub.unsubscribe();
+    }
   }
 }

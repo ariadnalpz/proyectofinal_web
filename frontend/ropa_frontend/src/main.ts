@@ -10,6 +10,8 @@ import { routes } from './app/app.routes';
 import { provideStore } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
+import { coleccionesReducer } from './app/state/colecciones/colecciones.reducer';
+import { ColeccionesEffects } from './app/state/colecciones/colecciones.effects';
 
 bootstrapApplication(AppComponent, {
   providers: [
@@ -17,8 +19,8 @@ bootstrapApplication(AppComponent, {
     provideHttpClient(),
     provideAnimations(),
     importProvidersFrom(MatToolbarModule, MatButtonModule),
-    provideStore(),
-    provideEffects(),
+    provideStore({ colecciones: coleccionesReducer }),
+    provideEffects([ColeccionesEffects]),
     provideStoreDevtools({ maxAge: 25, logOnly: !isDevMode() })
 ]
 }).catch(err => console.error(err));
